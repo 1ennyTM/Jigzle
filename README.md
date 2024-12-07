@@ -1,2 +1,2 @@
 # Jigzle
-Repository for the reddit app "Jigzly"
+Repository for the reddit app "Jigzle"
