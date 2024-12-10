@@ -1,4 +1,4 @@
-import Levels from '../config/playerlevels.json';
+import Levels from '../data/playerlevels.json';
 import type { Level } from '../../types/Level.js';
 
 /**

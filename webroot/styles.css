@@ -1,0 +1,19 @@
+body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /*
+    background-image: url("background.png");
+    background-repeat: repeat;
+    background-size:contain;
+    */
+    background: #9f2c2c;
+
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+canvas {
+    border: 5px solid #444444;
+}
