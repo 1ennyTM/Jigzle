@@ -2,8 +2,8 @@ import * as PIXI from 'pixi.js';
 import 'pixi.js/unsafe-eval';
 
 import type { GameState, BrickState, Particle } from './Gametypes.js';
-import type { Stats } from '../types/shared/Stats.js';
-import type { SaveEmblem } from '../types/shared/BlockWebMessage.js';
+import type { Stats } from '../types/Stats.js';
+import type { SaveEmblem } from '../types/BlockWebMessage.js';
 
 export class BrickBreaker {
   private readonly app: PIXI.Application;
@@ -210,7 +210,6 @@ export class BrickBreaker {
     return container;
   }
 
-  
   private initialize(): void {
     console.log('Initializing game');
     this.createPaddle();

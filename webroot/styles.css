@@ -8,12 +8,12 @@ body {
     background-repeat: repeat;
     background-size:contain;
     */
-    background: #9f2c2c;
+    background: #00ff00;
 
     position: fixed;
     width: 100%;
     height: 100%;
 }
 canvas {
-    border: 5px solid #444444;
+    border: 10px solid #ff0000;
 }

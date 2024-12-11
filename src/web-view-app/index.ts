@@ -1,6 +1,8 @@
 import  * as PIXI from 'pixi.js';
+
+import { EmblemCreator } from './EmblemCreator.js';
+
 import type { Renderer } from 'pixi.js';
-import { BrickBreaker } from './BrickBreaker.js';
 
 const getGameWidth = (): number => {
     const width = window.innerWidth;
@@ -10,16 +12,19 @@ const getGameWidth = (): number => {
     return 288;
 };
 
-const app = new PIXI.Application<Renderer<HTMLCanvasElement>>();
-
 (async() => {
+    // Create a new application
+    const app = new PIXI.Application<Renderer<HTMLCanvasElement>>();
+
+    // Initialize the application
     await app.init({
         width: getGameWidth(),
         height: getGameWidth(), //324
-        backgroundColor: 0x000000,
+        background: '#1099bb',
         antialias: true,
     });
 
+    // Append the application canvas to the document body
     console.log(app);
     console.log(app.canvas);
     document.body.appendChild(app.canvas);

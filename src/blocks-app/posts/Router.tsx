@@ -1,4 +1,4 @@
-import { Devvit, useAsync, useState } from '@devvit/public-api';
+import { Devvit, useAsync } from '@devvit/public-api';
 
 import { LoadingState } from '../components/LoadingState.js';
 import { Service } from '../../service/Service.js';
@@ -24,7 +24,6 @@ import type { GameSettings } from '../../types/GameSettings.js';
 // @ts-ignore 
 export const Router: Devvit.CustomPostComponent = (context: Context) => {  
   const postId = context.postId as PostId;
-  const [webviewVisible, setWebviewVisible] = useState(false);
 
   const service = new Service(context);
 
@@ -104,8 +103,6 @@ export const Router: Devvit.CustomPostComponent = (context: Context) => {
         userData={userData}
         username={username}
         gameSettings={gameSettings}
-        webviewVisible = {webviewVisible}
-        setWebviewVisible = {setWebviewVisible}
       />
     )
     /*
@@ -115,8 +112,6 @@ export const Router: Devvit.CustomPostComponent = (context: Context) => {
         userData={userData}
         username={username}
         gameSettings={gameSettings}
-        webviewVisible = {webviewVisible}
-        setWebviewVisible = {setWebviewVisible}
       />
     ),
     collection: <CollectionPost collection={postData as CollectionPostData} />
@@ -128,9 +123,8 @@ export const Router: Devvit.CustomPostComponent = (context: Context) => {
   /*
    * Return the custom post unit
   */
-
   return (
-    <zstack width="100%" height="100%" alignment="top start">
+    <zstack grow width="100%" height="100%" alignment="middle center">
       <image
         imageHeight={400}
         imageWidth={400}

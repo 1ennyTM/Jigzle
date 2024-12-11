@@ -10,14 +10,10 @@ interface EditorPageProps {
   username: string | null;
   gameSettings: GameSettings;
   userData: UserData;
-  webviewVisible: boolean;
-  setWebviewVisible: (visible: boolean) => void;
   onCancel: () => void;
 }
 
 export const EditorPage = (props: EditorPageProps, context: Context): JSX.Element => {
-    const {webviewVisible, setWebviewVisible} = props;
-    setWebviewVisible(true);
 
     const service = new Service(context);
 
@@ -32,7 +28,6 @@ export const EditorPage = (props: EditorPageProps, context: Context): JSX.Elemen
         },
         async () => {
           props.onCancel();
-          setWebviewVisible(false)
           context.ui.showToast('Canceled');
         }
     );
@@ -84,19 +79,15 @@ export const EditorPage = (props: EditorPageProps, context: Context): JSX.Elemen
             context.ui.navigateTo(post);
         }
     }
-    
+
     return (
-       <zstack grow={webviewVisible} height={webviewVisible ? '100%' : '0px'}>            
-            <webview 
-            id="game-webview"
-            url="game.html" 
-            grow 
-            width="100%"
-            minWidth="100%"
-            onMessage={(msg) => onPostHandler(msg as SaveEmblem)}
-            />            
-        </zstack>
+        <webview 
+        grow
+        height="100%" 
+        width="100%" 
+        id="web-view"
+        url="game.html"
+        onMessage={(msg) => onPostHandler(msg as SaveEmblem)}
+        />
     );
 };
-
-//<SplashScreen context={context} webviewVisible={webviewVisible} setWebviewVisible={setWebviewVisible} />

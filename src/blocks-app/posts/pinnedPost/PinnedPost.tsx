@@ -28,8 +28,7 @@ interface PinnedPostProps {
   userData: UserData;
   username: string | null;
   gameSettings: GameSettings;
-  webviewVisible: boolean;
-  setWebviewVisible: (visible: boolean) => void;
+
 }
 
 export const PinnedPost = (props: PinnedPostProps, context: Context): JSX.Element => {
@@ -135,16 +134,12 @@ export const PinnedPost = (props: PinnedPostProps, context: Context): JSX.Elemen
     menu: Menu,
 
     create: <EditorPage 
-      {...props} 
-      webviewVisible={props.webviewVisible} 
-      setWebviewVisible={props.setWebviewVisible}  
+      {...props}
       onCancel={onClose} 
     />,
     /*
     'my-drawings': <MyDrawingsPage 
       {...props} 
-      webviewVisible={webviewVisible} 
-      setWebviewVisible={setWebviewVisible}  
       onClose={onClose} 
       onDraw={() => setPage('create')} 
     />,
