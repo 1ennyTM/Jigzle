@@ -6,6 +6,7 @@
   "type": "module",
   "dependencies": {
     "@devvit/public-api": "0.11.3",
+    "pixi-actions": "^1.2.4",
     "pixi.js": "^8.5.2"
   },
   "devDependencies": {

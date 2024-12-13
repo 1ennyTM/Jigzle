@@ -3,17 +3,14 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    /*
-    background-image: url("background.png");
-    background-repeat: repeat;
-    background-size:contain;
-    */
-    background: #00ff00;
+
+    background-color: rgb(255, 255, 255);
+    background-image: url("../assets/background.png");
 
     position: fixed;
     width: 100%;
     height: 100%;
 }
 canvas {
-    border: 10px solid #ff0000;
+    border: 2px solid #dddddd;
 }
