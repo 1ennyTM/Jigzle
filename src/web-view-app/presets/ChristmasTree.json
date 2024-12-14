@@ -1,0 +1,50 @@
+{   
+    "0":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 1,
+            "height": 1,
+            "cornerRadius": 0,
+            "fillColor": "0xFC5185"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.5],
+        "rotation": 0
+    },
+    "1":{
+        "props":{
+            "baseShape": "Star",
+            "sides": 5,
+            "radius": 0.2,
+            "innerRadius": 0.1,
+            "fillColor": "0x3FC1C9"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.5],
+        "rotation": 0
+    },
+    "2":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 0.4,
+            "height": 0.2,
+            "cornerRadius": 10,
+            "fillColor": "0xFFFFFF"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.5],
+        "rotation": 0
+    },
+    "3":{
+        "props":{
+            "baseShape": "Polygon",
+            "radius": 0.2,
+            "sides": 5,
+            "cornerRadius": 5,
+            "fillColor": "0x3FC1C9"
+        },
+        "scale": [1,1],
+        "position": [0.2,0.2],
+        "rotation": 0
+    }
+}

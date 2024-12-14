@@ -6,6 +6,7 @@ import type { Renderer } from 'pixi.js';
 
 // Create a new application
 const app = new PIXI.Application<Renderer<HTMLCanvasElement>>();
+globalThis.__PIXI_APP__ = app;
 
 const getGameWidth = (): number => {
     const width = window.innerWidth;
@@ -28,25 +29,25 @@ async function setup(){
     console.log(app);
     console.log(app.canvas);
     document.body.appendChild(app.canvas);
-}
+};
+
+// Create an array of asset data to load.
+const assets = [
+    { alias: 'background', src: '../../../assets/background.png' },
+    { alias: 'align_arrow', src: '../../../assets/align_arrow.svg',},
+    { alias: 'box_packed', src: '../../../assets/box_packed.svg'},
+    { alias: 'box_unpacked', src: '../../../assets/box_unpacked.svg' },//, data: {parseAsGraphicsContext: true}
+    { alias: 'chevron', src: '../../../assets/chevron.svg' },
+    { alias: 'clock', src: '../../../assets/clock.svg' },
+    { alias: 'layer', src: '../../../assets/layer.svg' },
+    { alias: 'eye_off', src: '../../../assets/eye_off.svg' },
+    { alias: 'eye_on', src: '../../../assets/eye_on.svg' },
+];
 
 async function preload(){
-    // Create an array of asset data to load.
-    const assets = [
-        { alias: 'background', src: 'https://pixijs.com/assets/tutorials/fish-pond/pond_background.jpg' },
-        { alias: 'background2', src: '../../../assets/background.png' },
-        { alias: 'fish1', src: 'https://pixijs.com/assets/tutorials/fish-pond/fish1.png' },
-        { alias: 'fish2', src: 'https://pixijs.com/assets/tutorials/fish-pond/fish2.png' },
-        { alias: 'fish3', src: 'https://pixijs.com/assets/tutorials/fish-pond/fish3.png' },
-        { alias: 'fish4', src: 'https://pixijs.com/assets/tutorials/fish-pond/fish4.png' },
-        { alias: 'fish5', src: 'https://pixijs.com/assets/tutorials/fish-pond/fish5.png' },
-        { alias: 'overlay', src: 'https://pixijs.com/assets/tutorials/fish-pond/wave_overlay.png' },
-        { alias: 'displacement', src: 'https://pixijs.com/assets/tutorials/fish-pond/displacement_map.png' },
-    ];
-
     // Load the assets defined above.
     await PIXI.Assets.load(assets);
-}
+};
 
 (async() => {
 
@@ -59,11 +60,11 @@ async function preload(){
         if (app.screen.width !== newWidth) {
             app.renderer.resize(newWidth, newWidth);
             app.stage.removeChildren();
-            game = new EmblemCreator(app);
+            game = new EmblemCreator(app, assets);
         }
     });
 
-    game = new EmblemCreator(app);
+    game = new EmblemCreator(app, assets);
 
 })();
 
