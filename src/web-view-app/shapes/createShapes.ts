@@ -20,11 +20,13 @@ var BaseShapeMap = {
     Ellipse: createEllipse,
     Arc: createArc,
     Polygon: createNPolygon,
-    TriRightAngle: createRightAngledTri,
+    TriRight: createRightAngledTri,
 };
 
 function createStar(props: ShapeTypes.IcreateStar, canvasLength: number): PIXI.Graphics {
-    return new PIXI.Graphics().star(0, 0, props.sides, props.radius*canvasLength, props.innerRadius*canvasLength);
+    let star = new PIXI.Graphics().star(0, 0, props.sides, props.radius*canvasLength, props.innerRadius*canvasLength);
+        star.hitArea = new PIXI.Circle(0,0, props.radius*canvasLength);
+    return star
 };
 
 function createFilletRect(props:ShapeTypes.IcreateFilletRect, canvasLength: number ): PIXI.Graphics {
@@ -32,6 +34,7 @@ function createFilletRect(props:ShapeTypes.IcreateFilletRect, canvasLength: numb
     let height = props.height*canvasLength;
     let rectangle = new PIXI.Graphics().filletRect(0, 0, width, height, props.cornerRadius);
         rectangle.pivot.set(width/2, height/2);
+        rectangle.hitArea = new PIXI.Rectangle(0,0,width,height);
     return rectangle
 };
 
@@ -40,11 +43,16 @@ function creatChamferRect(props: ShapeTypes.IcreatChamferRect, canvasLength: num
     let height = props.height*canvasLength;
     let rectangle = new PIXI.Graphics().chamferRect(0, 0, width, height, props.cornerRadius);
         rectangle.pivot.set(width/2, height/2);
+        rectangle.hitArea = new PIXI.Rectangle(0,0,width,height);
     return rectangle
 };
 
 function createEllipse(props: ShapeTypes.IcreateEllipse, canvasLength: number): PIXI.Graphics {
-    return new PIXI.Graphics().ellipse(0, 0, props.radiusX*canvasLength, props.radiusY*canvasLength);
+    const halfwidth = props.radiusX*canvasLength
+    const halfheight = props.radiusY*canvasLength
+    let ellipse = new PIXI.Graphics().ellipse(0, 0, halfwidth, halfheight);
+    ellipse.hitArea = new PIXI.Ellipse(0, 0, halfwidth, halfheight);
+    return ellipse
 };
 
 function createArc(props: ShapeTypes.IcreateArc, canvasLength: number): PIXI.Graphics {
@@ -55,12 +63,34 @@ function createArc(props: ShapeTypes.IcreateArc, canvasLength: number): PIXI.Gra
 
 function createNPolygon(props: ShapeTypes.IcreateNPolygon, canvasLength: number): PIXI.Graphics {
     props.sides>=3 ? props.sides : 3;
-    return new PIXI.Graphics().roundPoly(0, 0, props.radius*canvasLength, props.sides, props.cornerRadius);
+
+    const radius = props.radius*canvasLength;
+    let collision
+    if (props.sides == 3){
+        const cornerCoord = radius*Math.sin((30/180)*Math.PI);
+        collision = new PIXI.Polygon([-radius,cornerCoord, 0, -radius, radius,cornerCoord])
+  
+    }else if(props.sides == 4){
+        collision = new PIXI.Polygon([-radius,0, 0,-radius, radius,0, 0, radius])
+
+    } else{
+        collision = new PIXI.Circle(0,0, props.radius*canvasLength);
+    }
+
+    let polygon = new PIXI.Graphics().roundPoly(0, 0, radius, props.sides, props.cornerRadius);
+        polygon.hitArea = collision
+    return polygon
 };
 
 function createRightAngledTri(props: ShapeTypes.IcreateRightAngledTri, canvasLength: number): PIXI.Graphics {
-    let rightTri = new PIXI.Graphics().poly([0, 0, 0, props.width*canvasLength, props.width*canvasLength, props.height*canvasLength]);
-    rightTri.pivot.set(props.width*2/3, props.width*4/3);
+    let rightTri = new PIXI.Graphics().poly([
+        0, 0,
+        0, props.width*canvasLength, 
+        props.width*canvasLength, props.width*canvasLength
+    ]);
+    rightTri.pivot.set(props.width*canvasLength/3,((props.width*canvasLength)+(props.width*canvasLength))/3);
+    rightTri.hitArea = new PIXI.Polygon([0, 0, 0, props.width*canvasLength, props.width*canvasLength, props.width*canvasLength]);
+
     return rightTri
 };
 

@@ -1,6 +1,6 @@
 import  * as PIXI from 'pixi.js';
 
-import { EmblemCreator } from './emblemCreator/EmblemCreator.js';
+import { EmblemSolver } from './emblemSolver/EmblemSolver.js';
 
 import type { Renderer } from 'pixi.js';
 
@@ -42,6 +42,8 @@ const assets = [
     { alias: 'layer', src: '../../../assets/layer.svg' },
     { alias: 'eye_off', src: '../../../assets/eye_off.svg' },
     { alias: 'eye_on', src: '../../../assets/eye_on.svg' },
+    { alias: 'rotate', src: '../../../assets/arrow_rotate.svg' },
+    { alias: 'puzzle', src: '../../../assets/puzzle.svg' },
 ];
 
 async function preload(){
@@ -54,17 +56,17 @@ async function preload(){
     await setup();
     await preload();
 
-    let game: EmblemCreator;
+    let game: EmblemSolver;
     window.addEventListener('resize', () => {
         const newWidth = getGameWidth();
         if (app.screen.width !== newWidth) {
             app.renderer.resize(newWidth, newWidth);
             app.stage.removeChildren();
-            game = new EmblemCreator(app, assets);
+            game = new EmblemSolver(app, assets);
         }
     });
 
-    game = new EmblemCreator(app, assets);
+    game = new EmblemSolver(app, assets);
 
 })();
 

@@ -5,7 +5,7 @@
             "width": 1,
             "height": 1,
             "cornerRadius": 0,
-            "fillColor": "0xFC5185"
+            "fillColor": "0xDFF2EB"
         },
         "scale": [1,1],
         "position": [0.5,0.5],
@@ -13,38 +13,197 @@
     },
     "1":{
         "props":{
-            "baseShape": "Star",
-            "sides": 5,
-            "radius": 0.2,
-            "innerRadius": 0.1,
-            "fillColor": "0x3FC1C9"
+            "baseShape": "RectFillet",
+            "width": 1,
+            "height": 0.25,
+            "cornerRadius": 0,
+            "fillColor": "0x7AB2D3"
         },
         "scale": [1,1],
-        "position": [0.5,0.5],
+        "position": [0.5,0.875],
         "rotation": 0
     },
     "2":{
         "props":{
             "baseShape": "RectFillet",
-            "width": 0.4,
-            "height": 0.2,
-            "cornerRadius": 10,
-            "fillColor": "0xFFFFFF"
+            "width": 1,
+            "height": 0.25,
+            "cornerRadius": 0,
+            "fillColor": "0xB9E5E8"
         },
         "scale": [1,1],
-        "position": [0.5,0.5],
+        "position": [0.5,0.625],
         "rotation": 0
     },
     "3":{
         "props":{
             "baseShape": "Polygon",
-            "radius": 0.2,
-            "sides": 5,
-            "cornerRadius": 5,
-            "fillColor": "0x3FC1C9"
+            "radius": 0.35,
+            "sides": 3,
+            "cornerRadius": 30,
+            "fillColor": "0x344955",
+            "fillAlpha":0.8
+        },
+        "scale": [1,1.2],
+        "position": [0.3,0.55],
+        "rotation": -0.6
+    },
+    "4":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 0.1,
+            "height": 0.3,
+            "cornerRadius": 20,
+            "fillColor": "0x344955",
+            "fillAlpha":0.8
         },
         "scale": [1,1],
-        "position": [0.2,0.2],
+        "position": [0.40,0.85],
+        "rotation": -0.6
+    },
+    "5":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 0.1,
+            "height": 0.3,
+            "cornerRadius": 20,
+            "fillColor": "0x997C70"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.85],
+        "rotation": 0
+    },
+    "6":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 0.04,
+            "height": 0.3,
+            "cornerRadius": 20,
+            "fillColor": "0x685752"
+        },
+        "scale": [1,1],
+        "position": [0.47,0.85],
+        "rotation": 0
+    },    
+    "7":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 0.2,
+            "height": 0.05,
+            "cornerRadius": 20,
+            "fillColor": "0x674636"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.975],
+        "rotation": 0
+
+    },
+    "8":{
+        "props":{
+            "baseShape": "Polygon",
+            "radius": 0.35,
+            "sides": 3,
+            "cornerRadius": 30,
+            "fillColor": "0x66785F"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.68],
+        "rotation": 0
+    },
+    "9":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 0.05,
+            "height": 0.22,
+            "cornerRadius": 20,
+            "fillColor": "0x4B5945"
+        },
+        "scale": [1,1],
+        "position": [0.29,0.75],
+        "rotation": 0.53
+    },
+    "10":{
+        "props":{
+            "baseShape": "Polygon",
+            "radius": 0.30,
+            "sides": 3,
+            "cornerRadius": 30,
+            "fillColor": "0x91AC8F"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.54],
+        "rotation": 0
+    },
+    "11":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 0.05,
+            "height": 0.22,
+            "cornerRadius": 20,
+            "fillColor": "0x6B8A7A"
+        },
+        "scale": [1,1],
+        "position": [0.33,0.59],
+        "rotation": 0.53
+    },
+    "12":{
+        "props":{
+            "baseShape": "Polygon",
+            "radius": 0.25,
+            "sides": 3,
+            "cornerRadius": 30,
+            "fillColor": "0x66785F"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.4],
+        "rotation": 0
+    },
+    "13":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 0.05,
+            "height": 0.22,
+            "cornerRadius": 20,
+            "fillColor": "0x4B5945"
+        },
+        "scale": [1,1],
+        "position": [0.38,0.42],
+        "rotation": 0.52
+    },
+    "14":{
+        "props":{
+            "baseShape": "Polygon",
+            "radius": 0.20,
+            "sides": 3,
+            "cornerRadius": 30,
+            "fillColor": "0x91AC8F"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.25],
+        "rotation": 0
+    },  
+    "15":{
+        "props":{
+            "baseShape": "RectFillet",
+            "width": 0.05,
+            "height": 0.28,
+            "cornerRadius": 20,
+            "fillColor": "0x6B8A7A"
+        },
+        "scale": [1,1],
+        "position": [0.44,0.22],
+        "rotation": 0.52
+    },
+    "16":{
+        "props":{
+            "baseShape": "Star",
+            "sides": 5,
+            "radius": 0.05,
+            "innerRadius": 0.025,
+            "fillColor": "0xFFD23F"
+        },
+        "scale": [1,1],
+        "position": [0.5,0.05],
         "rotation": 0
     }
 }
