@@ -1,4 +1,7 @@
+
+//@ts-nocheck 
 import * as PIXI from 'pixi.js';
+import { sound } from '@pixi/sound';
 import { Actions , Interpolations } from 'pixi-actions';
 import drawSlider from './drawSlider';
 import chirstmasTree from '../presets/ChristmasTree.json';
@@ -46,6 +49,98 @@ function formatPuzzleText(count, totalPieces){
     return formattedText.join(' ');; 
 }
 
+function overlappingArea(l1, r1, l2, r2){
+    let x = 0
+    let y = 1
+
+    // Area of 1st Rectangle
+    let area1 = Math.abs(l1[x] - r1[x]) * Math.abs(l1[y] - r1[y])
+
+    // Area of 2nd Rectangle
+    let area2 = Math.abs(l2[x] - r2[x]) * Math.abs(l2[y] - r2[y])
+
+    // Length of intersecting part i.e 
+    // start from max(l1[x], l2[x]) of 
+    // x-coordinate and end at min(r1[x],
+    // r2[x]) x-coordinate by subtracting 
+    // start from end we get required 
+    // lengths 
+    let x_dist = (Math.min(r1[x], r2[x]) -
+            Math.max(l1[x], l2[x]))
+
+    let y_dist = (Math.min(r1[y], r2[y]) -
+            Math.max(l1[y], l2[y]))
+    let areaI = 0
+    if (x_dist > 0 && y_dist > 0)
+        areaI = x_dist * y_dist
+
+    return (area1 + area2 - areaI)
+}
+
+function randomNumber(min, max) {
+    return Math.random() * (max - min) + min;
+}
+function clamp(num: number, lower: number, upper: number) {
+    return Math.min(Math.max(num, lower), upper);
+}
+
+function isChildOf(parent, child):boolean{
+    const children = parent.children
+    for (let i = 0; i < children.length; i++){
+        if (children[i] == child){
+            return true;
+    }}
+    return false
+}
+
+let volume = 1;
+let bgMusic
+function playBgMusic(){
+    function loopMusic(){
+        bgMusic = sound.play('bgMusic1');
+        bgMusic.volume = volume;
+        bgMusic.on('progress', function(progress) {
+            if (progress >0.96){
+                bgMusic.stop;
+                bgMusic.off('progress');
+                loopMusic();
+            }
+        });
+    }
+    loopMusic();
+}
+function playBackSound(){
+    const clip = sound.play('back');
+    clip.volume = volume;
+}
+
+function playClickSound(){
+    const tracks = ['click','click2'];
+    let track = tracks[Math.floor(Math.random() * tracks.length)];
+    let clip = sound.play(track);
+    clip.volume = volume;
+}
+
+function playSuccessSound(success:boolean, count){
+    let clip
+    if(success){ 
+        clip = sound.play('success');
+    }else{
+        clip = sound.play('fail');
+    };
+    clip.volume = volume;
+}
+
+function playPickSound(pick:boolean){
+    let clip
+    if(pick){ 
+        clip =sound.play('pick');
+    }else{
+        clip =sound.play('unpick');
+    };
+    clip.volume = volume;
+}
+
 export class EmblemSolver {
     private readonly app: PIXI.Application;
  
@@ -64,6 +159,8 @@ export class EmblemSolver {
     private FONT_COLOR: number = 0xFFFFFF;
     private FONT_FAMILY: string = 'Arial';
 
+    private SHOVE_STRENGTH: number = 0.4;
+    private PIECE_DRAWER_RATIO: number = 0.3;
     private CANVAS_DRAWER_RATIO: number = 0.2;
     private DRAWER_BACK_DIFF_RATIO:number = 0.05;
     private DRAWER_WIDTH: number;
@@ -73,9 +170,8 @@ export class EmblemSolver {
     private BUTTON_HEIGHT: number;
     private BUTTON_SPACING = 10;
 
-    constructor(app: PIXI.Application, assets){
+    constructor(app: PIXI.Application){
         this.app = app;
-        this.assets = assets;
 
         this.currentShape = null;
         
@@ -103,12 +199,11 @@ export class EmblemSolver {
         return chirstmasTree
     }
 
-    private saveGameState(): void {
-       //this.loadedData = chirstmasTree
-    }
 
     private initialise(): void {
         // Setup app
+        playBgMusic();
+
         let timer = 0;
 
         const app = this.app;
@@ -120,19 +215,24 @@ export class EmblemSolver {
 
         //load game state
         const loadedData = this.loadGameState();
-        const [canvasBackground, containerEmblem] = this.drawEmblemBackground(loadedData);
+        let [canvasBackground, containerEmblem, totalPieces] = this.drawEmblemBackground(loadedData);
+
+        totalPieces-- ;// remove emblem background from the count
+
+        const [containerBanner, startBut, puzzleTxt, timerTxt] = this.drawScreenOverlay(totalPieces);
+
         app.stage.addChild(canvasBackground);
         app.stage.addChild(containerEmblem);
-        
-        return
-        
-        this.toggleEmblemFilter(containerEmblem, true)
+        //app.stage.addChild(containerBanner);
 
-        const containerPieces = this.drawEmblem(loadedData, false);
+        //return
+        
+        const [containerPieces, _] = this.drawEmblem(loadedData, false);
         const rotAngle = (this.SHAPE_ROT_ANGLE/180)*Math.PI;
 
         // setup event for each pieces and jumble up
-        let totalPieces = 0;
+        
+        let successfulPieces = [];
         containerPieces.children.forEach(child => {
 
             child.eventMode = 'static';
@@ -151,47 +251,113 @@ export class EmblemSolver {
 
             //jumble animation
             Actions.sequence(
+                Actions.delay(5),
                 Actions.parallel(
                     Actions.moveTo(child,newX,newY,1,Interpolations.smooth),
                     Actions.rotateTo(child,newRot,1,Interpolations.smooth),
                 ),
             ).play()
-            totalPieces++;
         });
 
         const [containerTimer, 
             puzzleText, timerText
         ] = this.drawHUD(totalPieces);
 
-        const[containerDrawer, 
+        const[containbotHUD,
             visButton, visIcon,
+            containDraw, containDrawText, drawerBg,
             containBoxBut, boxButton, boxIcon,
-            containRotRightBut, RotRightBut,
-            containRotLeftBut, RotLeftBut,
-            containerZBut, layerText,
-            zUpBut,,zDownBut
+            containRotRightBut, RotRightBut, rotRightIcon,
+            containRotLeftBut, RotLeftBut, 
+            containZUpBut, zUpBut, zUpIcon,
+            containZDownBut, zDownBut, zDownIcon,
+            containlayerDis, layerText
         ] = this.drawDrawerContainer(totalPieces);
   
         let dragTarget:PIXI.Graphics|null = null;
         let currentPiece: PIXI.Graphics|null = null;
-        onPieceDelection();
 
         let isDragging = false;
         let PIECE_DIST_TOLERANCE = this.PIECE_DIST_TOLERANCE;
         let PIECE_AREA_TOLERANCE = this.PIECE_AREA_TOLERANCE;
-        
+
+        let volumeToggle = 3;
+        function selectVolButIcon(){
+            if (volumeToggle==1) {
+                zDownIcon.texture = PIXI.Assets.get('sound_off');
+            } else if(volumeToggle==2){
+                zDownIcon.texture = PIXI.Assets.get('sound_low');
+            } else{
+                zDownIcon.texture = PIXI.Assets.get('sound_high');
+            };
+        }
+        function turnOnVolumeButton(){
+            selectVolButIcon();
+
+            zDownBut.on('pointerdown',() =>{
+                volumeToggle++;
+                volumeToggle = volumeToggle%3;
+                selectVolButIcon()
+                if (volumeToggle==1) {
+                    volume = 0;
+                    bgMusic.pause;
+                } else if(volumeToggle==2){
+                    volume = 0.5;
+                    bgMusic.resume;
+                    bgMusic.volume = volume;
+                } else{
+                    volume = 1;
+                    bgMusic.volume = volume;
+                };
+                
+            });
+        };
+        turnOnVolumeButton();
+
+        let islock = false;
+        function turnOnLockButton(){
+            zUpIcon.texture = islock ? PIXI.Assets.get('lock') : PIXI.Assets.get('unlock');
+
+            zUpBut.on('pointerdown',() =>{
+                islock = !islock;
+                zUpIcon.texture = islock ? PIXI.Assets.get('lock') : PIXI.Assets.get('unlock');
+
+                if (islock){
+                    playClickSound();
+                    for (let i = 0; i < successfulPieces.length; i++) {
+                        successfulPieces[i].eventMode = 'none';
+                        successfulPieces[i].cursor = 'default';
+                        successfulPieces[i].off('pointerdown');
+                    }                 
+                }else{
+                    playBackSound();
+                    for (let i = 0; i < successfulPieces.length; i++) {
+                        successfulPieces[i].eventMode = 'static';
+                        successfulPieces[i].cursor = 'pointer';
+                        successfulPieces[i].on('pointerdown', onDragStart);
+                    };
+                }
+            })
+        }
+        turnOnLockButton();
+
         function onCompletion(){
             console.log("You Win")
         }
 
-        let count = 0;
-        let successfulPieces = [];
         function onSuccessfulPlacement(piece){
             if (!successfulPieces.includes(piece)){
                 successfulPieces.push(piece);
-                count++; 
-                puzzleText.text = formatPuzzleText(count,totalPieces);
-                if(count == totalPieces){onCompletion()};
+                puzzleText.text = formatPuzzleText(successfulPieces.length,totalPieces);
+                playSuccessSound(true);
+
+                if (islock){
+                    piece.eventMode = 'none';
+                    piece.cursor = 'default';
+                    piece.off('pointerdown');      
+                }
+
+                if(successfulPieces.length == totalPieces){onCompletion()};
             }
         }
 
@@ -201,13 +367,13 @@ export class EmblemSolver {
                 if (index > -1) { // only splice array when item is found
                     successfulPieces.splice(index, 1); // 2nd parameter means remove one item only
                 }
-                count--;
-                puzzleText.text = formatPuzzleText(count,totalPieces);
+                puzzleText.text = formatPuzzleText(successfulPieces.length,totalPieces);
+                playSuccessSound(false);
             }
         }
 
         function onCheckPlacement(currentPiece:PIXI.Graphics){
-            let pieceIndex = containerPieces.getChildIndex(currentPiece)
+            let pieceIndex = currentPiece.zIndex
             let correspondingPiece = containerEmblem.getChildAt(pieceIndex)
 
             let bounds1 = currentPiece.getBounds();
@@ -219,35 +385,6 @@ export class EmblemSolver {
             let distDif = Math.round(Math.sqrt(distDiffX+distDiffY));
 
             if (distDif <= app.screen.height*PIECE_DIST_TOLERANCE) {
-
-                function overlappingArea(l1, r1, l2, r2){
-                    let x = 0
-                    let y = 1
-                
-                    // Area of 1st Rectangle
-                    let area1 = Math.abs(l1[x] - r1[x]) * Math.abs(l1[y] - r1[y])
-                
-                    // Area of 2nd Rectangle
-                    let area2 = Math.abs(l2[x] - r2[x]) * Math.abs(l2[y] - r2[y])
-                
-                    // Length of intersecting part i.e 
-                    // start from max(l1[x], l2[x]) of 
-                    // x-coordinate and end at min(r1[x],
-                    // r2[x]) x-coordinate by subtracting 
-                    // start from end we get required 
-                    // lengths 
-                    let x_dist = (Math.min(r1[x], r2[x]) -
-                            Math.max(l1[x], l2[x]))
-                
-                    let y_dist = (Math.min(r1[y], r2[y]) -
-                            Math.max(l1[y], l2[y]))
-                    let areaI = 0
-                    if (x_dist > 0 && y_dist > 0)
-                        areaI = x_dist * y_dist
-                
-                    return (area1 + area2 - areaI)
-                };
-
                 bounds1 = currentPiece.getBounds();
                 bounds2 = correspondingPiece.getBounds();
                 const areaOverlap = overlappingArea(
@@ -272,66 +409,127 @@ export class EmblemSolver {
             }
         }
 
-        let animRunning = false;
-        let drawerToggle = true;
+        const containHolding = new PIXI.Container();
+        containDraw.addChild(containHolding)
+
         const DRAWERBACK_HEIGHT = this.DRAWERBACK_HEIGHT;
+        const stageHeight = this.stageHeight;
+        const minHeight = stageHeight - DRAWERBACK_HEIGHT;
+        let shove = stageHeight*this.SHOVE_STRENGTH
+        function shovePiece(piece):void{
+            const x = clamp(randomNumber(piece.position.x-shove, piece.position.x+shove),0,stageHeight);
+            const y = clamp(randomNumber(minHeight, minHeight-shove), 0, stageHeight-DRAWERBACK_HEIGHT)
+            const t = randomNumber(0.5,1.5);
+            Actions.moveTo(piece,x,y,t,Interpolations.fade).play()
+        }
+
+        let animRunning = false;
+        let drawerToggle = false;
+        let PIECE_DRAWER_RATIO = this.PIECE_DRAWER_RATIO;
         function toggleDrawer():void{
             if (animRunning) return
-            
             animRunning = true
+
+            onPieceDelection()
+            
+            boxIcon.texture = drawerToggle ? PIXI.Assets.get('box_packed') : PIXI.Assets.get('box_unpacked');
+
             drawerToggle = !drawerToggle;
-
-            boxIcon.texture = drawerToggle ? PIXI.Assets.get('box_unpacked') : PIXI.Assets.get('box_packed');
-
-            if (drawerToggle) {
+            if (!drawerToggle) {
+                playClickSound()
                 Actions.sequence(
-                    Actions.parallel(
-                        Actions.moveTo(containerDrawer,0,0,0.5,Interpolations.fade),
-                    ),
-                    Actions.runFunc(()=>{
-                        animRunning = false;
-                    })
+                    Actions.moveTo(containbotHUD,0,0,0.5,Interpolations.fade),
+                    Actions.runFunc(()=>{animRunning = false;})
                 ).play()
+                drawerBg.alpha = 0.7;  
+                //push pieces behind drawer up
+
+                containerPieces.children.forEach(child => {
+                    if (child.position.y >= minHeight && !successfulPieces.includes(child)){
+                        shovePiece(child)
+                    }
+                });
+
+                //activate unload button
+                rotRightIcon.texture = PIXI.Assets.get('unload');
+                containRotRightBut.alpha = 1;
+                RotRightBut.cursor = 'pointer';
+                let i = 0;
+                RotRightBut.on('pointerdown',() =>{
+                    playClickSound()
+                    let dasd =  containHolding.children
+                    dasd.forEach(child => {
+                        containerPieces.reparentChild(child)
+                        shovePiece(child)
+                        let scaleUpX = child.scale.x/PIECE_DRAWER_RATIO;
+                        let scaleUpY = child.scale.y/PIECE_DRAWER_RATIO;
+                        Actions.scaleTo(child, scaleUpX,scaleUpY,0.5,Interpolations.linear).play();
+                        i++
+                    });
+                    let dasae =  containHolding.children
+                    console.log(dasd.length,dasae.length);
+                    i=0;
+                })
+  
 
             } else {
+                playBackSound()
                 Actions.sequence(
-                    Actions.parallel(
-                        Actions.moveTo(containerDrawer,0,DRAWERBACK_HEIGHT,0.5,Interpolations.fade),
-                    ),
-                    Actions.runFunc(()=>{
-                        animRunning = false;
-                    })
+                    Actions.moveTo(containbotHUD,0,DRAWERBACK_HEIGHT,0.5,Interpolations.fade),
+                    Actions.runFunc(()=>{animRunning = false;})
                 ).play()
+                drawerBg.alpha = 0.9;
+
+                //deactivate unload button
+                containRotRightBut.alpha = 0;
+                RotRightBut.cursor = 'default';
+                RotRightBut.off('pointerdown');
+                rotRightIcon.texture = PIXI.Assets.get('rotate');
             }
         }
         boxButton.on('pointerdown', toggleDrawer);
-        toggleDrawer()
 
         // toggle Visibility
         let currentLayer = totalPieces-1;
         let visToggle = false
         visButton.on('pointerdown', ()=>{ 
-            if (drawerToggle){toggleDrawer()};
+            if (!drawerToggle){toggleDrawer()};
 
             visToggle = !visToggle;
             visIcon.texture = visToggle ? PIXI.Assets.get('eye_off') : PIXI.Assets.get('eye_on');
-
-            if (visToggle){
-                this.toggleEmblemFilter(containerEmblem, false);
-                containerPieces.alpha = 0.1;
             
+            if (visToggle){
+                playClickSound()
+                this.toggleEmblemFilter(containerEmblem, false);
+                
+                containerPieces.alpha = 0.1;
+
+                onPieceDelection()
+
                 containBoxBut.alpha = 0;
                 boxButton.off('pointerdown');
                 boxButton.cursor = 'default';
 
-                onPieceDelection()
+                containlayerDis.alpha = 1;
 
-                containerZBut.alpha = 1;
-                zUpBut.cursor = 'pointer';
-                zDownBut.cursor = 'pointer';
+                zUpBut.off('pointerdown');
+                zUpIcon.texture = PIXI.Assets.get('align_arrow');
+
+                zDownBut.off('pointerdown');
+                zDownIcon.texture = PIXI.Assets.get('align_arrow');
+                zDownIcon.scale.y *= -1;
+
+                let i = 0;
+                containerEmblem.children.forEach(child => {
+                    if (i > currentLayer){
+                        child.alpha = 0;
+                    }
+                    i++
+                });
 
                 zUpBut.on('pointerdown',() =>{
                     if (currentLayer < totalPieces-1){
+                        playClickSound()
                         currentLayer++
                         let currentPiece = containerEmblem.getChildAt(currentLayer)
                         currentPiece.alpha = 1
@@ -340,7 +538,9 @@ export class EmblemSolver {
                     }
                 })
                 zDownBut.on('pointerdown', () =>{
-                    if (currentLayer > 0){
+
+                    if (currentLayer >= 0){
+                        playClickSound()
                         let currentPiece = containerEmblem.getChildAt(currentLayer)
                         currentPiece.alpha = 0;
                         currentLayer--;
@@ -352,6 +552,7 @@ export class EmblemSolver {
                 layerText.text = formatPuzzleText(currentLayer+1, totalPieces);
 
             }else{
+                playBackSound()
                 this.toggleEmblemFilter(containerEmblem, true);
                 containerPieces.alpha = 1;
 
@@ -359,131 +560,188 @@ export class EmblemSolver {
                 boxButton.on('pointerdown', toggleDrawer);
                 boxButton.cursor = 'pointer';
 
-                containerZBut.alpha = 0;
-                zUpBut.cursor = 'Default';
-                zDownBut.cursor = 'Default';
+                containlayerDis.alpha = 0;
+
                 zUpBut.off('pointerdown');
                 zDownBut.off('pointerdown');
+                zDownIcon.scale.y *= -1;
+
+                turnOnVolumeButton()
+                turnOnLockButton()
+      
+                containerEmblem.children.forEach(child => {
+                    child.alpha = 1;
+                });
             }
         });
 
         function onDragMove(event){
-            if (dragTarget){
-                // reduce transparency of other pieces
-                if (!isDragging){
-                    containerPieces.children.forEach(child => {
-                        if (child != dragTarget){
-                            child.alpha = 0.5
-                        }
-                    });
-                    isDragging = true
-                }
-                dragTarget.parent.toLocal(event.global, null, dragTarget.position);
-            };
+            if (dragTarget == null){return}
+
+            // reduce transparency of other pieces
+            if (!isDragging){
+                containerPieces.children.forEach(child => {
+                    if (child != dragTarget){
+                        child.alpha = 0.5;
+                    }
+                });
+                isDragging = true;
+            }
+            dragTarget.parent.toLocal(event.global, null, dragTarget.position);
+
+            if (!drawerToggle){onDrawDragMove()}
         }
 
         function onDragStart(){
             if (visToggle){return};
+            playPickSound(true);
 
             // Store a reference to the data
             // * The reason for this is because of multitouch *
             // * We want to track the movement of this particular touch *
             dragTarget = this;
-
-            onPieceDelection()
-            onPieceSelection(dragTarget)
-   
+            if (!drawerToggle){
+                onDrawDragStart()
+            }else{
+                onPieceDelection()
+                onPieceSelection(dragTarget)
+            }
+            
             app.stage.on('pointermove', onDragMove);
         };
-
+        
         function onDragEnd(){
-            if (dragTarget){
-                isDragging = false;
-                app.stage.off('pointermove', onDragMove);
+            if (dragTarget == null){ return}
+            
+            isDragging = false;
+            app.stage.off('pointermove', onDragMove);
 
-                containerPieces.children.forEach(child => {
-                    if (child != dragTarget){
-                        child.alpha = 1
-                    }
-                });
-                onCheckPlacement(dragTarget)
-                dragTarget = null;
+            containerPieces.children.forEach(child => {
+                if (child != dragTarget){
+                    child.alpha = 1
+                }
+            });
+
+            if (!drawerToggle){
+                onDrawerDragEnd();
+            }else{
+                onCheckPlacement(dragTarget);
             }
+            playPickSound(false);
+            dragTarget = null;
+        };
+
+        let isChildOfHold, isChildOfPieces, newPiece = false;
+        function onDrawDragStart(){
+            currentPiece = null;
+
+            drawerBg.alpha = 0.9;
+
+            isChildOfHold = isChildOf(containHolding, dragTarget)
+            isChildOfPieces = isChildOf(containerPieces, dragTarget)
+            if (!isChildOfHold){
+                containHolding.reparentChild(dragTarget)
+                newPiece = true;
+            } 
+        };
+
+        let dragScaleToggle = false;
+        function onDrawDragMove(){
+            let distDiffY = (dragTarget.y - drawerBg.y);
+        
+            if (newPiece){
+                if (distDiffY >= 0 && !dragScaleToggle){
+                    let scaleUpX = dragTarget.scale.x*PIECE_DRAWER_RATIO;
+                    let scaleUpY = dragTarget.scale.y*PIECE_DRAWER_RATIO;
+                    dragTarget.scale.set(scaleUpX, scaleUpY);
+                    dragScaleToggle = true;
+                }else if (distDiffY < 0 && dragScaleToggle){
+                    let scaleDownX = dragTarget.scale.x/PIECE_DRAWER_RATIO;
+                    let scaleDownY = dragTarget.scale.y/PIECE_DRAWER_RATIO;
+                    dragTarget.scale.set(scaleDownX, scaleDownY);
+                    dragScaleToggle = false;
+                }
+            }else{
+                if (distDiffY >= 0 && dragScaleToggle){
+                    let scaleUpX = dragTarget.scale.x*PIECE_DRAWER_RATIO;
+                    let scaleUpY = dragTarget.scale.y*PIECE_DRAWER_RATIO;
+                    dragTarget.scale.set(scaleUpX, scaleUpY);
+                    dragScaleToggle = false;
+                }else if (distDiffY < 0 && !dragScaleToggle){
+                    let scaleDownX = dragTarget.scale.x/PIECE_DRAWER_RATIO;
+                    let scaleDownY = dragTarget.scale.y/PIECE_DRAWER_RATIO;
+                    dragTarget.scale.set(scaleDownX, scaleDownY);
+                    dragScaleToggle = true;
+                }
+            }
+        };
+
+        function onDrawerDragEnd(){
+            dragScaleToggle = false
+            drawerBg.alpha = 0.7;
+
+            let distDiffY = (dragTarget.y - drawerBg.y);
+            if (distDiffY <= 0){
+                containerPieces.reparentChild(dragTarget)
+
+            };
+            isChildOfHold = null;
+            isChildOfPieces = null;
+            newPiece = false; 
         };
 
         function onPieceSelection(currentPiece){
             currentPiece = currentPiece;
             containRotLeftBut.alpha = 1;
             containRotRightBut.alpha = 1;
-            containerZBut.alpha = 1;
-
+    
             RotRightBut.cursor = 'pointer';
             RotLeftBut.cursor = 'pointer';
-            zUpBut.cursor = 'pointer';
-            zDownBut.cursor = 'pointer';
 
             RotRightBut.on('pointerdown',() =>{
+                playClickSound()
                 currentPiece.rotation += rotAngle
                 onCheckPlacement(currentPiece)
             })
             RotLeftBut.on('pointerdown', () =>{
+                playClickSound()
                 currentPiece.rotation -= rotAngle
                 onCheckPlacement(currentPiece)
             })
 
-            zUpBut.on('pointerdown',() =>{
-                if (currentPiece.zIndex < totalPieces){
-                    currentPiece.zIndex += 1
-                    layerText.text = formatPuzzleText(currentPiece.zIndex, totalPieces);
-
-                    let pieceIndex = containerPieces.getChildIndex(currentPiece)
-                    console.log(pieceIndex)
-                    //onCheckPlacement(currentPiece)
-                }
-            
-            })
-            zDownBut.on('pointerdown', () =>{
-                if (currentPiece.zIndex != 0){
-                    currentPiece.zIndex -= 1
-                    layerText.text = formatPuzzleText(currentPiece.zIndex, totalPieces);
-
-                    let pieceIndex = containerPieces.getChildIndex(currentPiece)
-                    console.log(pieceIndex)
-                    //onCheckPlacement(currentPiece)
-                }
-            })
-
-            layerText.text = formatPuzzleText(currentPiece.zIndex, totalPieces);
-        }
+            containlayerDis.alpha = 1;
+            layerText.text = formatPuzzleText(currentPiece.zIndex+1, totalPieces);
+        };
 
         function onPieceDelection(){
             currentPiece = null;
 
+            if(drawerToggle){
+                containRotRightBut.alpha = 0;
+                RotRightBut.off('pointerdown');
+                RotRightBut.cursor = 'default';
+            }
+
             containRotLeftBut.alpha = 0;
-            containRotRightBut.alpha = 0;
-            containerZBut.alpha = 0;
-
-            RotRightBut.off('pointerdown');
             RotLeftBut.off('pointerdown');
-            zUpBut.off('pointerdown');
-            zDownBut.off('pointerdown');
-
-            RotRightBut.cursor = 'default';
             RotLeftBut.cursor = 'default';
-            zUpBut.cursor = 'default';
-            zDownBut.cursor = 'default';
-        }
+
+            containlayerDis.alpha = 0;
+        };
    
         // Deselect
         canvasBackground.eventMode = 'static';
         canvasBackground.on('pointerdown',()=>{
             onPieceDelection()
-        })
+        });
 
-        app.stage.addChild(canvasBackground);
-        app.stage.addChild(containerEmblem);
+        containerEmblem.interactiveChildren = false;
+        this.toggleEmblemFilter(containerEmblem, true);
+        toggleDrawer()
+        onPieceDelection();
+
         app.stage.addChild(containerPieces);
-        app.stage.addChild(containerDrawer);
+        app.stage.addChild(containbotHUD);
         app.stage.addChild(containerTimer);
 
         let dt = 0;
@@ -496,12 +754,12 @@ export class EmblemSolver {
         });
     }
 
-    private drawEmblemBackground(loadedData):Array<[PIXI.Graphics,PIXI.Container]>{
-        let containerEmblem = this.drawEmblem(loadedData, true);
+    private drawEmblemBackground(loadedData):Array<[PIXI.Graphics,PIXI.Container, number]>{
+        let [containerEmblem, totalPieces] = this.drawEmblem(loadedData, true);
         let canvasBackground = containerEmblem.getChildAt(0);
         containerEmblem.removeChildAt(0);
 
-        return [canvasBackground, containerEmblem]
+        return [canvasBackground, containerEmblem, totalPieces]
     }
 
     private toggleEmblemFilter(container: PIXI.Container, turnOn: boolean):void{
@@ -512,7 +770,6 @@ export class EmblemSolver {
             colorMatrix.blackAndWhite(true);
             colorMatrix2.contrast(0.3,true);
             container.filters = [colorMatrix, colorMatrix2, filterBlur];
-            container.cacheAsTexture({antialias:true, resolution:0.9});
  
         } else {
             container.cacheAsTexture(false);
@@ -520,7 +777,7 @@ export class EmblemSolver {
         }
     }
 
-    private drawEmblem(data, includeBackground: boolean):PIXI.Container{
+    private drawEmblem(data, includeBackground: boolean):[PIXI.Container, number]{
         const containerEmblem = new PIXI.Container();
         let i=0;
         for (const [key, value] of Object.entries(data)){       
@@ -536,15 +793,88 @@ export class EmblemSolver {
             if (key == "0" && !includeBackground){ continue }
             containerEmblem.addChild(newShape);
             i++
-       
         }
-        return containerEmblem
+        return [containerEmblem, i]
+    }
+
+    private drawScreenOverlay(totalPieces):Array<[
+        PIXI.Container,
+        PIXI.Graphics,
+        PIXI.Text, PIXI.Text,
+    ]>{
+        const BUTTON_HEIGHT = this.BUTTON_HEIGHT;
+
+         //Banner
+        const bgWidth = this.stageWidth/3
+        const bannerBg =  new PIXI.Graphics()
+        .filletRect(0, 0, this.stageWidth, this.stageWidth*1/3, 0)
+        .fill({ color: 0x364F6B, alpha: 0.5})
+        .stroke({ color: 0xF5F5F5, width: 2, alignment: 0});
+
+        const filterBlur = new PIXI.BlurFilter({strength: 5});
+        bannerBg.filters = [filterBlur];
+        bannerBg.cacheAsTexture(true);
+
+        const startButton =  new PIXI.Graphics()
+        .filletRect(0, 0, this.stageWidth/10, this.stageWidth/10, 0)
+        .fill({ color: 0x364F6B, alpha: 0.5})
+        .stroke({ color: 0xF5F5F5, width: 2, alignment: 0});
+
+        const timerBgY = 0;
+        const timerBgX = this.stageWidth/2 - bgWidth/2;
+        bannerBg.position.set(timerBgX, timerBgY);
+   
+        const puzzleIconX = timerBgX + (bgWidth*13/20);
+        const puzzleIcon = this.createButtonIcon(puzzleIconX, this.stageWidth/2, 'puzzle');
+        
+        //Add No of puzzle
+        const puzzleText = new PIXI.Text({
+            text: formatPuzzleText(0, totalPieces),
+                style: {
+                    fill: '#F5F5F5',
+                    fontFamily: 'Arial',
+                    fontSize: 20,
+                    align: 'left',
+                },
+            });
+  
+        puzzleText.roundPixels = true;
+        puzzleText.anchor.set(-0.3,0.5);
+        const puzzleTextX = timerBgX + (bgWidth*13/20);
+        puzzleText.position.set(puzzleTextX, this.stageWidth/2);
+
+        const timerText = new PIXI.Text({
+            text: "",
+            style: {
+                fill: '#F5F5F5',
+                fontFamily: 'Arial',
+                fontSize: 20,
+                align: 'left',
+            },
+        });
+
+        timerText.roundPixels = true;
+        timerText.anchor.set(0,0.5);
+        const timerTextX = timerBgX + (bgWidth*4/20);
+        timerText.position.set(timerTextX, this.stageWidth/2);
+               
+        const containerBanner = new PIXI.Container();
+        containerBanner.interactiveChildren = false
+        containerBanner.addChild(
+            bannerBg,
+            startButton,
+            puzzleIcon,
+            puzzleText,
+            timerText,
+        );
+
+        return [containerBanner, startButton, puzzleText, timerText]
     }
 
     private drawHUD(totalPieces:number):Array<[PIXI.Container, PIXI.Text, PIXI.Text]>{
         const BUTTON_HEIGHT = this.BUTTON_HEIGHT;
 
-        //timerBg
+         //timerBg
         const bgWidth = this.stageWidth/3
         const timerBg =  new PIXI.Graphics()
         .filletRect(0, 0, bgWidth, BUTTON_HEIGHT,5)
@@ -598,7 +928,7 @@ export class EmblemSolver {
         timerText.position.set(timerTextX, clockIconY);
                
         const containerTimer = new PIXI.Container();
-
+        containerTimer.interactiveChildren = false
         containerTimer.addChild(
             timerBg,
             clockIcon,
@@ -629,21 +959,23 @@ export class EmblemSolver {
 
     private drawDrawerContainer(totalPieces:number):Array<[
         PIXI.Container, 
-        PIXI.Graphics,PIXI.Graphics,
-        PIXI.Container, PIXI.Graphics,PIXI.Graphics,
-        PIXI.Container, PIXI.Graphics,
-        PIXI.Container, PIXI.Graphics,
-        PIXI.Container, PIXI.Text,
-        PIXI.Graphics, PIXI.Graphics
-
+        PIXI.Graphics, PIXI.Graphics,
+        PIXI.Container, PIXI.Container, PIXI.Graphics,
+        PIXI.Container, PIXI.Graphics, PIXI.Graphics,
+        PIXI.Container, PIXI.Graphics, PIXI.Graphics,
+        PIXI.Container, PIXI.Graphics, 
+        PIXI.Container, PIXI.Graphics, PIXI.Graphics,
+        PIXI.Container, PIXI.Graphics, PIXI.Graphics,
+        PIXI.Container, PIXI.Text
         ]>{
         const DRAWERBACK_HEIGHT = this.DRAWERBACK_HEIGHT;
         const BUTTON_WIDTH =  this.BUTTON_WIDTH;
         const BUTTON_HEIGHT = this.BUTTON_HEIGHT;
    
-        // draw Canvas Container
-        const containerDrawer = new PIXI.Container();
+        // bottom HUD Container
+        const containbotHUD = new PIXI.Container();
 
+        // drawer
         const drawerBack = new PIXI.Graphics()
         .filletRect(0, 0, this.DRAWER_WIDTH, DRAWERBACK_HEIGHT, 5)
         .fill({color: 0x364F6B , alpha: 1})
@@ -652,6 +984,13 @@ export class EmblemSolver {
         drawerBack.position.set(0, drawerBackY);
 
         // z-layer text
+        const drawerInner = new PIXI.Graphics()
+        .filletRect(0, 0, this.DRAWER_WIDTH*3/4, DRAWERBACK_HEIGHT*3/4, 5)
+        .stroke({ color: 0xF5F5F5, width: 2, alignment: 0});
+        const drawerInnerX = this.DRAWER_WIDTH/2 - this.DRAWER_WIDTH*3/8;
+        const drawerInnerY = this.stageHeight - DRAWERBACK_HEIGHT*7/8
+        drawerInner.position.set(drawerInnerX, drawerInnerY);
+
         const drawerText = new PIXI.Text({
             text:'This is a box, you can store your puzzle pieces here!',
                 style: {
@@ -664,9 +1003,18 @@ export class EmblemSolver {
     
         drawerText.roundPixels = true;
         drawerText.anchor.set(0.5,0.5);
-        const drawerTextX = this.DRAWER_WIDTH/2;
         const drawerTextY = this.stageHeight- (DRAWERBACK_HEIGHT/2)
+        const drawerTextX = this.DRAWER_WIDTH/2;
         drawerText.position.set(drawerTextX, drawerTextY);
+
+        const containerDrawerText = new PIXI.Container();
+        containerDrawerText.addChild(drawerText,drawerInner)
+
+        const containerDrawer = new PIXI.Container();
+        containerDrawer.addChild(
+            drawerBack,
+            containerDrawerText
+        );
 
         function createButton(x: number, y: number):PIXI.Graphics{
             const button =  new PIXI.Graphics()
@@ -674,7 +1022,7 @@ export class EmblemSolver {
             .fill({ color: 0x364F6B })
             .stroke({ color: 0xF5F5F5, width: 2, alignment: 0});
     
-            button.position.set(x, y);
+            button.position.set(x, y-1);
             button.eventMode = 'static';
             button.cursor = 'pointer';
 
@@ -727,33 +1075,40 @@ export class EmblemSolver {
 
         // Layer Button
         // z-Up button
-
         const zUpButtonX = (this.BUTTON_SPACING *2) + BUTTON_WIDTH;
         const zUpButton = createButton(zUpButtonX, boxButtonY);
-        zUpButton.alpha = 0;
-
+      
         const zUpIconX = zUpButtonX + (BUTTON_WIDTH/2);
         const zUpIcon = this.createButtonIcon(zUpIconX, boxIconY, 'align_arrow');
-        
+
+        const containerzUpBut = new PIXI.Container();
+        containerzUpBut.addChild(zUpButton, zUpIcon);
+
         // z-Down button
-        const zDownButtonX = zUpButtonX + BUTTON_WIDTH*2;
+        const zDownButtonX = (this.BUTTON_SPACING *3) + (BUTTON_WIDTH*2);
         const zDownButton = createButton(zDownButtonX, boxButtonY);
-        zDownButton.alpha = 0;
 
         const zDownIconX = zDownButtonX + (BUTTON_WIDTH/2);
         const zDownIcon = this.createButtonIcon(zDownIconX, boxIconY, 'align_arrow');
-        zDownIcon.scale.y *= -1;
 
-        // z-layer Icon
-        const layerIconX = zUpButtonX + (BUTTON_WIDTH*3)*3/9;
-        const layerIcon = this.createButtonIcon(layerIconX, boxIconY, 'layer');
+        const containerzDownBut = new PIXI.Container();
+        containerzDownBut.addChild(zDownButton, zDownIcon);
 
         // z-layer Bg
         const zBackground = new PIXI.Graphics()
-        .filletRect(0, 0, BUTTON_WIDTH*3, BUTTON_HEIGHT,5)
-        .fill({ color: 0x364F6B })
+        .filletRect(0, 0, BUTTON_WIDTH*2, BUTTON_HEIGHT,5)
+        .fill({ color: 0x364F6B, alpha: 0.5})
         .stroke({ color: 0xF5F5F5, width: 2, alignment: 0});
-        zBackground.position.set(zUpButtonX, boxButtonY);
+
+        const zBgX = (this.stageWidth/2) - (BUTTON_WIDTH)
+        zBackground.position.set(zBgX, boxButtonY);
+
+        const filterBlur = new PIXI.BlurFilter({strength: 5});
+        zBackground.filters = [filterBlur];
+
+        // z-layer Icon
+        const layerIconX = zBgX + (BUTTON_WIDTH*2)*1/4;
+        const layerIcon = this.createButtonIcon(layerIconX, boxIconY, 'layer');
 
         // z-layer text
         const layerText = new PIXI.Text({
@@ -768,37 +1123,35 @@ export class EmblemSolver {
   
         layerText.roundPixels = true;
         layerText.anchor.set(-0.3,0.5);
-        const layerTextX = zUpButtonX + (BUTTON_WIDTH*3)*3/9;
+        const layerTextX = zBgX + (BUTTON_WIDTH*2)*1/4;
         layerText.position.set(layerTextX, boxIconY);
+        
+        const containerlayerDisplay = new PIXI.Container();
+        containerlayerDisplay.addChild(zBackground, layerText, layerIcon);
+        containerlayerDisplay.interactiveChildren = false
 
-        const containerZBut = new PIXI.Container();
-        containerZBut.addChild(zBackground,
-            zUpButton,zUpIcon, 
-            zDownButton, zDownIcon,
-            layerText, layerIcon)
-
-        containerDrawer.addChild(
+        containbotHUD.addChild(
             containerBoxBut,
             containerVisBut,
-            containerZBut,
             containerRotLeftBut,
             containerRotRightBut,
-            drawerBack,
-            drawerText
+            containerzUpBut, 
+            containerzDownBut,
+            containerlayerDisplay,
+            containerDrawer,
         );
 
-        return [containerDrawer, 
+        return [containbotHUD, 
             visButton, visIcon,
+            containerDrawer, containerDrawerText, drawerBack,
             containerBoxBut, boxButton, boxIcon,
-            containerRotRightBut, rotateRightButton, 
-            containerRotLeftBut, rotateLeftButton,
-            containerZBut, layerText,
-            zUpButton,,zDownButton
+            containerRotRightBut, rotateRightButton, rotateRightIcon,
+            containerRotLeftBut, rotateLeftButton, 
+            containerzUpBut, zUpButton, zUpIcon,
+            containerzDownBut, zDownButton, zDownIcon,
+            containerlayerDisplay, layerText
         ]
     }
-
-
-
 
 
     private drawGameContainers2() {
@@ -1012,7 +1365,6 @@ export class EmblemSolver {
     }
 
     private drawerColor():PIXI.Container {
-     
     }
 
     private drawerSizeRot():PIXI.Container {

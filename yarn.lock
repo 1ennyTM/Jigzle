@@ -41,6 +41,11 @@
   resolved "https://registry.npmjs.org/@pixi/colord/-/colord-2.9.6.tgz"
   integrity sha512-nezytU2pw587fQstUu1AsJZDVEynjskwOL+kibwcdxsMBFqPsFFNA7xl0ii/gXuDi6M0xj3mfRJj8pBSc2jCfA==
 
+"@pixi/sound@^6.0.1":
+  version "6.0.1"
+  resolved "https://registry.npmjs.org/@pixi/sound/-/sound-6.0.1.tgz"
+  integrity sha512-hpFlQSScAR2L/CsEoIvDi7s1oGsu8y9Zd742Vd3982N+q3IF2vFuIfV9HN4ryjlGnhCT8yBlEgs1gp4G9Rt9TA==
+
 "@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
   version "1.1.2"
   resolved "https://registry.npmjs.org/@protobufjs/aspromise/-/aspromise-1.1.2.tgz"
@@ -246,7 +251,7 @@ pixi-actions@^1.2.4:
   resolved "https://registry.npmjs.org/pixi-actions/-/pixi-actions-1.2.4.tgz"
   integrity sha512-9kw0o8VOCBIi1STblRNnZiz2jskUSC6Bt5ekJPeGyG9lud6Qa8URZBqU3qGBnawLlj5u3jMXjGg21fU9kic6OQ==
 
-pixi.js@^8.5.2, pixi.js@>8.0.0:
+pixi.js@^8.0.0, pixi.js@^8.5.2, pixi.js@>8.0.0:
   version "8.6.4"
   resolved "https://registry.npmjs.org/pixi.js/-/pixi.js-8.6.4.tgz"
   integrity sha512-hPJpxh3GRjU/wnDPlGZ9WqndJpDpQuaGnRpbAci3r7loX9Zw0zKFm1fph278YFNPfywPA15vjd512OQqYKq5dA==
