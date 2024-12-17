@@ -93,8 +93,8 @@ function isChildOf(parent, child):boolean{
     return false
 }
 
-let volume = 1;
-let bgMusic
+var volume = 1;
+var bgMusic
 function playBgMusic(){
     function loopMusic(){
         bgMusic = sound.play('bgMusic1');
@@ -231,37 +231,44 @@ export class EmblemSolver {
         const rotAngle = (this.SHAPE_ROT_ANGLE/180)*Math.PI;
 
         // setup event for each pieces and jumble up
-        
         let successfulPieces = [];
-        containerPieces.children.forEach(child => {
-
-            child.eventMode = 'static';
-            child.cursor = 'pointer';
-            child.on('pointerdown', onDragStart);
-
+        function jumble(){
             //jumble location
-            const newX = Math.random() * app.screen.width;
-            const newY = Math.random() * app.screen.height;
+            const x = Math.random() * app.screen.width;
+            const y = Math.random() * app.screen.height;
             
             //jumble rotation
             const randomRot = (Math.random() * Math.PI * 2);
             //remove floating points and remainder
             const noOfRotation = Math.round((randomRot - (randomRot % rotAngle))/rotAngle);
-            const newRot = child.rotation + (noOfRotation * rotAngle);
+            const rot = (noOfRotation * rotAngle);
+
+            const t = randomNumber(0.5,1.5);
+            return [x,y,rot,t];
+        }
+
+        containerPieces.children.forEach(child => {
+            child.eventMode = 'static';
+            child.cursor = 'pointer';
+            child.on('pointerdown', onDragStart);
+
+            let [newX, newY, newRot, time] = jumble();
+            newRot += child.rotation;
 
             //jumble animation
             Actions.sequence(
                 Actions.delay(5),
                 Actions.parallel(
-                    Actions.moveTo(child,newX,newY,1,Interpolations.smooth),
-                    Actions.rotateTo(child,newRot,1,Interpolations.smooth),
+                    Actions.moveTo(child,newX,newY,time,Interpolations.smooth),
+                    Actions.rotateTo(child,newRot,time,Interpolations.smooth),
                 ),
-            ).play()
+            ).play();
         });
 
-        const [containerTimer, 
-            puzzleText, timerText
-        ] = this.drawHUD(totalPieces);
+        const [containGameInfo, 
+            puzzleText, timerText,
+            VolBut, volIcon
+        ] = this.drawTopHUD(totalPieces);
 
         const[containbotHUD,
             visButton, visIcon,
@@ -272,7 +279,7 @@ export class EmblemSolver {
             containZUpBut, zUpBut, zUpIcon,
             containZDownBut, zDownBut, zDownIcon,
             containlayerDis, layerText
-        ] = this.drawDrawerContainer(totalPieces);
+        ] = this.drawBottomHUD(totalPieces);
   
         let dragTarget:PIXI.Graphics|null = null;
         let currentPiece: PIXI.Graphics|null = null;
@@ -284,17 +291,17 @@ export class EmblemSolver {
         let volumeToggle = 3;
         function selectVolButIcon(){
             if (volumeToggle==1) {
-                zDownIcon.texture = PIXI.Assets.get('sound_off');
+                volIcon.texture = PIXI.Assets.get('sound_off');
             } else if(volumeToggle==2){
-                zDownIcon.texture = PIXI.Assets.get('sound_low');
+                volIcon.texture = PIXI.Assets.get('sound_low');
             } else{
-                zDownIcon.texture = PIXI.Assets.get('sound_high');
+                volIcon.texture = PIXI.Assets.get('sound_high');
             };
         }
         function turnOnVolumeButton(){
             selectVolButIcon();
 
-            zDownBut.on('pointerdown',() =>{
+            VolBut.on('pointerdown',() =>{
                 volumeToggle++;
                 volumeToggle = volumeToggle%3;
                 selectVolButIcon()
@@ -314,8 +321,8 @@ export class EmblemSolver {
         };
         turnOnVolumeButton();
 
-        let islock = false;
-        function turnOnLockButton(){
+        let islock = true;
+        function setupLockButton(){
             zUpIcon.texture = islock ? PIXI.Assets.get('lock') : PIXI.Assets.get('unlock');
 
             zUpBut.on('pointerdown',() =>{
@@ -338,12 +345,41 @@ export class EmblemSolver {
                     };
                 }
             })
-        }
-        turnOnLockButton();
+        };
+        setupLockButton();
+
+        function setupShakeButton(){
+            zDownIcon.texture = PIXI.Assets.get('shake');
+            zDownBut.on('pointerdown',() =>{
+                playClickSound();
+
+                const children = containerPieces.children;
+                let child
+                for (let i = 0; i < children.length; i++) {
+                    child = children[i];
+                    if (islock){
+                        if(successfulPieces.includes(child)){continue;};
+                    }else{
+                        onUnsuccessfulPlacement(child);
+                    }
+
+                    let [newX, newY, newRot, time] = jumble();
+                    newRot += child.rotation;
+
+                    //jumble animation
+                    Actions.parallel(
+                        Actions.moveTo(child,newX,newY,time,Interpolations.smooth),
+                        Actions.rotateTo(child,newRot,time,Interpolations.smooth),
+                    ).play();
+                };
+
+            });
+        };
+        setupShakeButton();
 
         function onCompletion(){
             console.log("You Win")
-        }
+        };
 
         function onSuccessfulPlacement(piece){
             if (!successfulPieces.includes(piece)){
@@ -359,7 +395,7 @@ export class EmblemSolver {
 
                 if(successfulPieces.length == totalPieces){onCompletion()};
             }
-        }
+        };
 
         function onUnsuccessfulPlacement(piece){
             if (successfulPieces.includes(piece)){
@@ -370,7 +406,7 @@ export class EmblemSolver {
                 puzzleText.text = formatPuzzleText(successfulPieces.length,totalPieces);
                 playSuccessSound(false);
             }
-        }
+        };
 
         function onCheckPlacement(currentPiece:PIXI.Graphics){
             let pieceIndex = currentPiece.zIndex
@@ -400,6 +436,7 @@ export class EmblemSolver {
 
                 if (areaRatio >= PIECE_AREA_TOLERANCE){
                     currentPiece.position = correspondingPiece.position;
+                    currentPiece.rotation = correspondingPiece.rotation;
                     onSuccessfulPlacement(currentPiece);
                 }else{
                     onUnsuccessfulPlacement(currentPiece);
@@ -407,20 +444,20 @@ export class EmblemSolver {
             }else{
                 onUnsuccessfulPlacement(currentPiece);
             }
-        }
+        };
 
         const containHolding = new PIXI.Container();
-        containDraw.addChild(containHolding)
+        containDraw.addChild(containHolding);
 
-        const DRAWERBACK_HEIGHT = this.DRAWERBACK_HEIGHT;
         const stageHeight = this.stageHeight;
+        const DRAWERBACK_HEIGHT = this.DRAWERBACK_HEIGHT;
         const minHeight = stageHeight - DRAWERBACK_HEIGHT;
         let shove = stageHeight*this.SHOVE_STRENGTH
-        function shovePiece(piece):void{
+        function shovePiece(piece, ):void{
             const x = clamp(randomNumber(piece.position.x-shove, piece.position.x+shove),0,stageHeight);
-            const y = clamp(randomNumber(minHeight, minHeight-shove), 0, stageHeight-DRAWERBACK_HEIGHT)
+            const y = clamp(randomNumber(minHeight, minHeight-shove), 0, stageHeight-DRAWERBACK_HEIGHT);
             const t = randomNumber(0.5,1.5);
-            Actions.moveTo(piece,x,y,t,Interpolations.fade).play()
+            Actions.moveTo(piece,x,y,t,Interpolations.fade).play();
         }
 
         let animRunning = false;
@@ -566,8 +603,8 @@ export class EmblemSolver {
                 zDownBut.off('pointerdown');
                 zDownIcon.scale.y *= -1;
 
-                turnOnVolumeButton()
-                turnOnLockButton()
+                setupShakeButton()
+                setupLockButton()
       
                 containerEmblem.children.forEach(child => {
                     child.alpha = 1;
@@ -742,7 +779,7 @@ export class EmblemSolver {
 
         app.stage.addChild(containerPieces);
         app.stage.addChild(containbotHUD);
-        app.stage.addChild(containerTimer);
+        app.stage.addChild(containGameInfo);
 
         let dt = 0;
         app.ticker.add((tick) => {
@@ -825,7 +862,7 @@ export class EmblemSolver {
         bannerBg.position.set(timerBgX, timerBgY);
    
         const puzzleIconX = timerBgX + (bgWidth*13/20);
-        const puzzleIcon = this.createButtonIcon(puzzleIconX, this.stageWidth/2, 'puzzle');
+        const puzzleIcon = this.drawButtonIcon(puzzleIconX, this.stageWidth/2, 'puzzle');
         
         //Add No of puzzle
         const puzzleText = new PIXI.Text({
@@ -870,8 +907,25 @@ export class EmblemSolver {
 
         return [containerBanner, startButton, puzzleText, timerText]
     }
+    
+    private drawButton(x: number, y: number):PIXI.Graphics{
+        const button =  new PIXI.Graphics()
+        .filletRect(0, 0, this.BUTTON_WIDTH, this.BUTTON_HEIGHT,5)
+        .fill({ color: 0x364F6B })
+        .stroke({ color: 0xF5F5F5, width: 2, alignment: 0});
 
-    private drawHUD(totalPieces:number):Array<[PIXI.Container, PIXI.Text, PIXI.Text]>{
+        button.position.set(x, y-1);
+        button.eventMode = 'static';
+        button.cursor = 'pointer';
+
+        return button
+    }
+
+    private drawTopHUD(totalPieces:number):Array<[
+        PIXI.Container, 
+        PIXI.Text, PIXI.Text,
+        PIXI.Container, PIXI.Graphics
+    ]>{
         const BUTTON_HEIGHT = this.BUTTON_HEIGHT;
 
          //timerBg
@@ -891,10 +945,10 @@ export class EmblemSolver {
    
         const clockIconX = timerBgX + (bgWidth*2/20);
         const clockIconY = timerBgY + (BUTTON_HEIGHT/2);
-        const clockIcon = this.createButtonIcon(clockIconX, clockIconY, 'clock');
+        const clockIcon = this.drawButtonIcon(clockIconX, clockIconY, 'clock');
 
         const puzzleIconX = timerBgX + (bgWidth*13/20);
-        const puzzleIcon = this.createButtonIcon(puzzleIconX, clockIconY, 'puzzle');
+        const puzzleIcon = this.drawButtonIcon(puzzleIconX, clockIconY, 'puzzle');
         
         //Add No of puzzle
         const puzzleText = new PIXI.Text({
@@ -926,10 +980,11 @@ export class EmblemSolver {
         timerText.anchor.set(0,0.5);
         const timerTextX = timerBgX + (bgWidth*4/20);
         timerText.position.set(timerTextX, clockIconY);
-               
-        const containerTimer = new PIXI.Container();
-        containerTimer.interactiveChildren = false
-        containerTimer.addChild(
+
+        // Game Info HUD
+        const containerGameInfo = new PIXI.Container();
+        containerGameInfo.interactiveChildren = false
+        containerGameInfo.addChild(
             timerBg,
             clockIcon,
             puzzleIcon,
@@ -937,10 +992,32 @@ export class EmblemSolver {
             timerText,
         );
 
-        return [containerTimer, puzzleText, timerText]
+        // Volume Button
+        const volumeButtonX = this.stageWidth - this.BUTTON_WIDTH - this.BUTTON_SPACING;
+        const volumeButton = this.drawButton(volumeButtonX, timerBgY);
+
+        const volumeIconX = volumeButtonX + (this.BUTTON_WIDTH/2);
+        const volumeIconY = timerBgY + (BUTTON_HEIGHT/2);
+        const volumeIcon = this.drawButtonIcon(volumeIconX, volumeIconY, 'sound_high');
+
+        const containerVolumeButton = new PIXI.Container();
+        containerVolumeButton.addChild(volumeButton, volumeIcon);
+
+        //HUD
+        const containTopHUD = new PIXI.Container();
+        containTopHUD.addChild(
+            containerGameInfo,
+            containerVolumeButton,
+        );
+
+
+        return [containTopHUD, 
+            puzzleText, timerText,
+            volumeButton, volumeIcon
+        ]
     }
 
-    private createButtonIcon(x: number, y: number, iconName: string):PIXI.Graphics{
+    private drawButtonIcon(x: number, y: number, iconName: string):PIXI.Graphics{
         const icon = PIXI.Sprite.from(iconName);
         // line it up as this svg is not centered
         const bounds = icon.getLocalBounds();
@@ -957,7 +1034,7 @@ export class EmblemSolver {
         return icon
     }
 
-    private drawDrawerContainer(totalPieces:number):Array<[
+    private drawBottomHUD(totalPieces:number):Array<[
         PIXI.Container, 
         PIXI.Graphics, PIXI.Graphics,
         PIXI.Container, PIXI.Container, PIXI.Graphics,
@@ -1016,47 +1093,34 @@ export class EmblemSolver {
             containerDrawerText
         );
 
-        function createButton(x: number, y: number):PIXI.Graphics{
-            const button =  new PIXI.Graphics()
-            .filletRect(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT,5)
-            .fill({ color: 0x364F6B })
-            .stroke({ color: 0xF5F5F5, width: 2, alignment: 0});
-    
-            button.position.set(x, y-1);
-            button.eventMode = 'static';
-            button.cursor = 'pointer';
-
-            return button
-        }
-
         //Box Button
         const boxButtonY = this.stageHeight - DRAWERBACK_HEIGHT - BUTTON_HEIGHT;
         const boxButtonX = this.stageWidth - BUTTON_WIDTH - this.BUTTON_SPACING;
-        const boxButton = createButton(boxButtonX, boxButtonY);
+        const boxButton = this.drawButton(boxButtonX, boxButtonY);
 
         const boxIconX = boxButtonX + (BUTTON_WIDTH/2);
         const boxIconY = boxButtonY + (BUTTON_HEIGHT/2);
-        const boxIcon = this.createButtonIcon(boxIconX, boxIconY, 'box_unpacked');
+        const boxIcon = this.drawButtonIcon(boxIconX, boxIconY, 'box_unpacked');
 
         const containerBoxBut = new PIXI.Container();
         containerBoxBut.addChild(boxButton, boxIcon);
 
         // rotate right button
         const rotateRightButtonX = boxButtonX - BUTTON_WIDTH - this.BUTTON_SPACING;
-        const rotateRightButton = createButton(rotateRightButtonX, boxButtonY);
+        const rotateRightButton = this.drawButton(rotateRightButtonX, boxButtonY);
 
         const rotateRightIconX = rotateRightButtonX + (BUTTON_WIDTH/2);
-        const rotateRightIcon = this.createButtonIcon(rotateRightIconX, boxIconY, 'rotate');
+        const rotateRightIcon = this.drawButtonIcon(rotateRightIconX, boxIconY, 'rotate');
 
         const containerRotRightBut = new PIXI.Container();
         containerRotRightBut.addChild(rotateRightButton, rotateRightIcon)
 
         // rotate left button
         const rotateLeftButtonX = rotateRightButtonX - BUTTON_WIDTH - this.BUTTON_SPACING;
-        const rotateLeftButton = createButton(rotateLeftButtonX, boxButtonY);
+        const rotateLeftButton = this.drawButton(rotateLeftButtonX, boxButtonY);
     
         const rotateLeftIconX = rotateLeftButtonX + (BUTTON_WIDTH/2);
-        const rotateLeftIcon = this.createButtonIcon(rotateLeftIconX, boxIconY, 'rotate');
+        const rotateLeftIcon = this.drawButtonIcon(rotateLeftIconX, boxIconY, 'rotate');
         rotateLeftIcon.scale.y *= -1;
         rotateLeftIcon.rotation = Math.PI;
 
@@ -1065,10 +1129,10 @@ export class EmblemSolver {
 
         //Visibility Button
         const visButtonX = this.BUTTON_SPACING;
-        const visButton = createButton(visButtonX, boxButtonY);
+        const visButton = this.drawButton(visButtonX, boxButtonY);
 
         const visIconX = visButtonX + (BUTTON_WIDTH/2);
-        const visIcon = this.createButtonIcon(visIconX, boxIconY, 'eye_off');
+        const visIcon = this.drawButtonIcon(visIconX, boxIconY, 'eye_off');
 
         const containerVisBut = new PIXI.Container();
         containerVisBut.addChild(visButton, visIcon);
@@ -1076,20 +1140,20 @@ export class EmblemSolver {
         // Layer Button
         // z-Up button
         const zUpButtonX = (this.BUTTON_SPACING *2) + BUTTON_WIDTH;
-        const zUpButton = createButton(zUpButtonX, boxButtonY);
+        const zUpButton = this.drawButton(zUpButtonX, boxButtonY);
       
         const zUpIconX = zUpButtonX + (BUTTON_WIDTH/2);
-        const zUpIcon = this.createButtonIcon(zUpIconX, boxIconY, 'align_arrow');
+        const zUpIcon = this.drawButtonIcon(zUpIconX, boxIconY, 'align_arrow');
 
         const containerzUpBut = new PIXI.Container();
         containerzUpBut.addChild(zUpButton, zUpIcon);
 
         // z-Down button
         const zDownButtonX = (this.BUTTON_SPACING *3) + (BUTTON_WIDTH*2);
-        const zDownButton = createButton(zDownButtonX, boxButtonY);
+        const zDownButton = this.drawButton(zDownButtonX, boxButtonY);
 
         const zDownIconX = zDownButtonX + (BUTTON_WIDTH/2);
-        const zDownIcon = this.createButtonIcon(zDownIconX, boxIconY, 'align_arrow');
+        const zDownIcon = this.drawButtonIcon(zDownIconX, boxIconY, 'align_arrow');
 
         const containerzDownBut = new PIXI.Container();
         containerzDownBut.addChild(zDownButton, zDownIcon);
@@ -1108,7 +1172,7 @@ export class EmblemSolver {
 
         // z-layer Icon
         const layerIconX = zBgX + (BUTTON_WIDTH*2)*1/4;
-        const layerIcon = this.createButtonIcon(layerIconX, boxIconY, 'layer');
+        const layerIcon = this.drawButtonIcon(layerIconX, boxIconY, 'layer');
 
         // z-layer text
         const layerText = new PIXI.Text({

@@ -50,6 +50,7 @@ async function preload(){
         { alias: 'unload', src: '../../../assets/unload.svg' },
         { alias: 'lock', src: '../../../assets/lock.svg' },
         { alias: 'unlock', src: '../../../assets/unlock.svg' },
+        { alias: 'shake', src: '../../../assets/shake.svg' },
         { alias: 'sound_off', src: '../../../assets/sound_off.svg' },
         { alias: 'sound_low', src: '../../../assets/sound_low.svg' },
         { alias: 'sound_high', src: '../../../assets/sound_high.svg' },
